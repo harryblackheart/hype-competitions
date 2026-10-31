@@ -9,7 +9,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.paypal.com https://*.paypal.com; connect-src 'self' https://*.supabase.co https://www.paypal.com https://*.paypal.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline';">
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://www.paypal.com/sdk/js?client-id=AY6PgnvlAbRHcSgA6sGEo3xdx5v7-7Ln-srrWwBQPcO8C0nwuQzyv2tSaQrncWzjbYAeE1vAPYrgwVEd&currency=GBP"></script>
+  <script src="https://www.paypal.com/sdk/js?client-id=AY6PgnvlAbRHcSgA6sGEo3xdx5v7-7Ln-srrWwBQPcO8C0nwuQzyv2tSaQrncWzjbYAeE1vAPYrgwVEd&currency=GBP&enable-funding=card,paylater,venmo"></script>
 </head>
 <body>
   <header>
@@ -132,7 +132,9 @@
       <div id="user-logged" style="display:none">
         <p>Logged in as <strong id="user-email-display"></strong></p>
         <p style="margin:10px 0">Credit: <strong id="user-credit-display">£0.00</strong></p>
-        <button class="btn-outline" style="width:100%;" onclick="userLogout()">Log out</button>
+        <h4 style="margin:14px 0 6px;font-size:0.95rem;">Your tickets</h4>
+        <div class="history-list" id="user-history"></div>
+        <button class="btn-outline" style="width:100%;margin-top:10px;" onclick="userLogout()">Log out</button>
       </div>
       <button class="btn-outline" style="width:100%;margin-top:12px;" id="close-user">Close</button>
     </div>
@@ -152,6 +154,16 @@
       <input id="custom-amount" type="number" step="0.01" min="5" placeholder="Custom amount (£)" style="margin-top:8px;" />
       <div id="paypal-button-container"></div>
       <button class="btn-outline" style="width:100%;margin-top:12px;" id="close-topup">Close</button>
+    </div>
+  </div>
+
+  <div class="reveal-overlay" id="reveal-overlay">
+    <div class="reveal-box">
+      <div class="reveal-icon" id="reveal-icon">🎰</div>
+      <h2 id="reveal-title">Checking...</h2>
+      <p id="reveal-msg">Please wait</p>
+      <button class="btn" id="reveal-claim" style="display:none;width:100%;">Claim</button>
+      <button class="btn-outline" id="reveal-close" style="width:100%;margin-top:8px;">Close</button>
     </div>
   </div>
 

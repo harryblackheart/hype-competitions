@@ -68,14 +68,14 @@ function renderPublic() {
   grid.innerHTML = '';
   competitions.forEach(c => {
     const imgMap = {
-      'bmw': 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=800&q=80',
-      'rolex': 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=800&q=80',
-      'cash': 'https://images.unsplash.com/photo-1580519542036-c47de6196ba5?w=800&q=80',
-      'bike': 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=800&q=80',
-      'airpods': 'https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?w=800&q=80'
+      'bmw': 'bmw.jpg',
+      'rolex': 'rolex.jpg',
+      'cash': 'cash.jpg',
+      'bike': 'bike.jpg',
+      'airpods': 'airpods.jpg'
     };
     const key = Object.keys(imgMap).find(k => (c.title || '').toLowerCase().includes(k));
-    const imgSrc = c.image || (key ? imgMap[key] : imgMap.bmw);
+    const imgSrc = key ? imgMap[key] : 'bmw.jpg';
     const card = document.createElement('div');
     card.className = 'comp-card';
     card.innerHTML = `
@@ -102,7 +102,7 @@ function renderPublic() {
         'airpods': 'airpods.jpg'
       };
       const keyI = Object.keys(imgMapI).find(k => (i.title || '').toLowerCase().includes(k));
-      const imgSrc = i.image || (keyI ? imgMapI[keyI] : 'bike.jpg');
+      const imgSrc = keyI ? imgMapI[keyI] : 'bike.jpg';
       const card = document.createElement('div');
       card.className = 'comp-card';
       card.innerHTML = `
@@ -311,9 +311,9 @@ function selectTopup(amount) {
 function renderPayPalButton() {
   const container = document.getElementById('paypal-button-container');
   if (!container) return;
-  container.innerHTML = '';
+  container.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">Loading payment options...</p>';
   if (typeof paypal === 'undefined') {
-    container.innerHTML = '<p style="color:#f66;font-size:0.85rem;">PayPal not loaded.</p>';
+    container.innerHTML = '<p style="color:#f66;font-size:0.85rem;">PayPal failed to load. Refresh the page or try again later.</p>';
     return;
   }
   const amount = selectedTopupAmount === 'custom'
@@ -323,7 +323,10 @@ function renderPayPalButton() {
     container.innerHTML = `<p style="color:#f66;font-size:0.85rem;">Minimum top-up is £${MIN_TOPUP}</p>`;
     return;
   }
+  container.innerHTML = '';
   paypal.Buttons({
+    fundingSource: undefined,
+    style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'paypal' },
     createOrder: (data, actions) => {
       return actions.order.create({
         purchase_units: [{
@@ -346,10 +349,16 @@ function renderPayPalButton() {
       });
     },
     onError: err => {
-      alert('Payment error. Please try again.');
-      console.error(err);
+      console.error('PayPal error:', err);
+      container.innerHTML = '<p style="color:#f66;font-size:0.85rem;">Payment error. Please try again or use a different method.</p>';
+    },
+    onCancel: () => {
+      container.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">Payment cancelled.</p>';
     }
-  }).render('#paypal-button-container');
+  }).render('#paypal-button-container').catch(err => {
+    console.error('PayPal render failed:', err);
+    container.innerHTML = '<p style="color:#f66;font-size:0.85rem;">Could not load payment buttons. Check your connection and refresh.</p>';
+  });
 }
 
 // ===== EVENTS =====
@@ -376,6 +385,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('user-btn')?.addEventListener('click', () => {
     document.getElementById('user-modal').classList.add('show');
     refreshUserModal();
+    if (currentUser) loadUserHistory();
   });
   document.getElementById('close-user')?.addEventListener('click', () => {
     document.getElementById('user-modal').classList.remove('show');
@@ -403,19 +413,45 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!currentUser) { alert('Please create an account first.'); document.getElementById('user-modal').classList.add('show'); return; }
       const price = parseFloat(e.target.dataset.price) || 1;
       const title = e.target.dataset.title || 'competition';
-      if (Number(currentUser.credit || 0) < price) {
-        alert(`Not enough credit. You need £${price.toFixed(2)}. Top up first.`);
+      const isInstant = e.target.closest('#instant-grid') !== null;
+
+      const qty = parseInt(prompt(`How many tickets for "${title}"?\nPrice: £${price.toFixed(2)} each`, '1')) || 1;
+      if (qty < 1) return;
+      const total = price * qty;
+      if (Number(currentUser.credit || 0) < total) {
+        alert(`Not enough credit. You need £${total.toFixed(2)}. Top up first.`);
         document.getElementById('topup-modal').classList.add('show');
         return;
       }
-      if (confirm(`Spend £${price.toFixed(2)} credit to enter "${title}"?`)) {
-        const newCredit = Number(currentUser.credit || 0) - price;
-        await sb.from('users').update({ credit: newCredit }).eq('email', currentUser.email);
-        currentUser.credit = newCredit;
-        updateCreditDisplay();
-        alert(`Entered! Your ticket is confirmed. Credit remaining: £${newCredit.toFixed(2)}`);
-        await loadAll();
+      if (!confirm(`Spend £${total.toFixed(2)} for ${qty} ticket(s) on "${title}"?`)) return;
+
+      const tickets = [];
+      for (let i = 0; i < qty; i++) {
+        tickets.push('HYP-' + Math.random().toString(36).slice(2, 8).toUpperCase());
       }
+
+      const newCredit = Number(currentUser.credit || 0) - total;
+      await sb.from('users').update({ credit: newCredit }).eq('email', currentUser.email);
+      currentUser.credit = newCredit;
+      updateCreditDisplay();
+
+      await sb.from('purchases').insert({
+        email: currentUser.email,
+        title,
+        tickets: tickets.join(', '),
+        qty,
+        total,
+        is_instant: isInstant,
+        created_at: new Date().toISOString()
+      });
+
+      if (isInstant) {
+        showReveal(tickets[0], title);
+      } else {
+        alert(`Entered!\nTicket${qty > 1 ? 's' : ''}: ${tickets.join(', ')}\nCredit remaining: £${newCredit.toFixed(2)}`);
+      }
+      await loadAll();
+      if (document.getElementById('user-modal').classList.contains('show')) loadUserHistory();
     }
   });
 
@@ -522,4 +558,65 @@ window.userRegister = userRegister;
 window.userLogin = userLogin;
 window.userLogout = userLogout;
 window.selectTopup = selectTopup;
-window.logout = () => { isAdmin = false; document.getElementById('admin-panel')?.classList.remove('show'); };
+function showReveal(ticket, title) {
+  const overlay = document.getElementById('reveal-overlay');
+  const icon = document.getElementById('reveal-icon');
+  const titleEl = document.getElementById('reveal-title');
+  const msg = document.getElementById('reveal-msg');
+  const claimBtn = document.getElementById('reveal-claim');
+  const closeBtn = document.getElementById('reveal-close');
+
+  overlay.classList.add('show');
+  icon.textContent = '🎰';
+  titleEl.textContent = 'Checking your ticket...';
+  msg.textContent = ticket;
+  claimBtn.style.display = 'none';
+
+  setTimeout(async () => {
+    const win = Math.random() < 0.25; // 25% chance of small credit win
+    const amounts = [2, 5, 10];
+    const winAmount = amounts[Math.floor(Math.random() * amounts.length)];
+
+    if (win) {
+      icon.textContent = '🎉';
+      titleEl.textContent = `You won £${winAmount} credit!`;
+      msg.textContent = `Ticket ${ticket} on ${title}`;
+      claimBtn.style.display = 'block';
+      claimBtn.onclick = async () => {
+        const newCredit = Number(currentUser.credit || 0) + winAmount;
+        await sb.from('users').update({ credit: newCredit }).eq('email', currentUser.email);
+        currentUser.credit = newCredit;
+        updateCreditDisplay();
+        claimBtn.style.display = 'none';
+        msg.textContent = `£${winAmount} added to your balance!`;
+        await loadAll();
+      };
+    } else {
+      icon.textContent = '😔';
+      titleEl.textContent = 'Bad luck this time';
+      msg.textContent = `Ticket ${ticket} — better luck next entry!`;
+    }
+  }, 1400);
+
+  closeBtn.onclick = () => overlay.classList.remove('show');
+}
+
+async function loadUserHistory() {
+  if (!currentUser) return;
+  const list = document.getElementById('user-history');
+  if (!list) return;
+  const { data } = await sb.from('purchases').select('*').eq('email', currentUser.email).order('created_at', { ascending: false }).limit(20);
+  list.innerHTML = '';
+  if (!data || !data.length) {
+    list.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">No tickets yet.</p>';
+    return;
+  }
+  data.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    item.innerHTML = `<div><strong>${p.title}</strong><br><span style="color:var(--muted)">${p.tickets}</span></div><span>£${Number(p.total).toFixed(2)}</span>`;
+    list.appendChild(item);
+  });
+}
+
+window.loadUserHistory = loadUserHistory;

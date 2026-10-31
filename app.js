@@ -34,18 +34,18 @@ async function loadAll() {
   // Seed if empty
   if (competitions.length === 0) {
     await sb.from('competitions').insert([
-      { title: 'Win a 2026 BMW M4', prize_value: 65000, total_tickets: 15000, price: 5.99, sold_percent: 42, end_date: '2026-11-05T23:00:00Z', image: '' },
-      { title: 'Rolex Submariner', prize_value: 12000, total_tickets: 2500, price: 7.99, sold_percent: 18, end_date: '2026-11-08T21:00:00Z', image: '' },
-      { title: '£50,000 Cash', prize_value: 50000, total_tickets: 100000, price: 0.65, sold_percent: 35, end_date: '2026-11-03T20:00:00Z', image: '' }
+      { title: 'Win a 2026 BMW M4', prize_value: 65000, total_tickets: 15000, price: 5.99, sold_percent: 42, end_date: '2026-11-05T23:00:00Z', image: 'images/bmw.jpg' },
+      { title: 'Rolex Submariner', prize_value: 12000, total_tickets: 2500, price: 7.99, sold_percent: 18, end_date: '2026-11-08T21:00:00Z', image: 'images/rolex.jpg' },
+      { title: '£50,000 Cash', prize_value: 50000, total_tickets: 100000, price: 0.65, sold_percent: 35, end_date: '2026-11-03T20:00:00Z', image: 'images/cash.jpg' }
     ]);
     await loadAll();
     return;
   }
   if (instants.length === 0) {
     await sb.from('instants').insert([
-      { title: 'Mountain Bike', value: 800, image: '' },
-      { title: '£500 Cash', value: 500, image: '' },
-      { title: 'AirPods Pro', value: 250, image: '' }
+      { title: 'Mountain Bike', value: 800, image: 'images/bike.jpg' },
+      { title: '£500 Cash', value: 500, image: 'images/cash.jpg' },
+      { title: 'AirPods Pro', value: 250, image: 'images/airpods.jpg' }
     ]);
     await loadAll();
     return;
@@ -67,7 +67,15 @@ function renderPublic() {
   if (!grid) return;
   grid.innerHTML = '';
   competitions.forEach(c => {
-    const imgSrc = c.image || `https://via.placeholder.com/600x300/161616/ff3c00?text=${encodeURIComponent((c.title || '').slice(0, 18))}`;
+    const imgMap = {
+      'bmw': 'images/bmw.jpg',
+      'rolex': 'images/rolex.jpg',
+      'cash': 'images/cash.jpg',
+      'bike': 'images/bike.jpg',
+      'airpods': 'images/airpods.jpg'
+    };
+    const key = Object.keys(imgMap).find(k => (c.title || '').toLowerCase().includes(k));
+    const imgSrc = c.image || (key ? imgMap[key] : 'images/bmw.jpg');
     const card = document.createElement('div');
     card.className = 'comp-card';
     card.innerHTML = `
@@ -88,7 +96,13 @@ function renderPublic() {
   if (ig) {
     ig.innerHTML = '';
     instants.forEach(i => {
-      const imgSrc = i.image || `https://via.placeholder.com/600x300/161616/00c853?text=${encodeURIComponent((i.title || '').slice(0, 18))}`;
+      const imgMapI = {
+        'bike': 'images/bike.jpg',
+        'cash': 'images/cash.jpg',
+        'airpods': 'images/airpods.jpg'
+      };
+      const keyI = Object.keys(imgMapI).find(k => (i.title || '').toLowerCase().includes(k));
+      const imgSrc = i.image || (keyI ? imgMapI[keyI] : 'images/bike.jpg');
       const card = document.createElement('div');
       card.className = 'comp-card';
       card.innerHTML = `
@@ -351,7 +365,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const logo = document.getElementById('logo-img');
   if (logo) {
-    logo.src = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="#111"/><text x="50" y="62" font-size="36" font-weight="800" text-anchor="middle" fill="#ff3c00">HC</text></svg>');
+    logo.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <rect width="100" height="100" rx="22" fill="#ff3c00"/>
+        <text x="50" y="64" font-size="42" font-weight="800" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif">HC</text>
+      </svg>
+    `);
   }
 
   document.getElementById('user-btn')?.addEventListener('click', () => {

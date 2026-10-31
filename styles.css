@@ -26,7 +26,7 @@ header {
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
 }
 .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; }
-.logo img { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; }
+.logo img { width: 42px; height: 42px; border-radius: 10px; object-fit: cover; }
 .header-actions { display: flex; gap: 8px; align-items: center; }
 .btn {
   background: linear-gradient(90deg, var(--accent), var(--accent2));

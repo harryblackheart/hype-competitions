@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hype Competitions – Win Big</title>
+  <meta name="theme-color" content="#ff3c00" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.paypal.com https://*.paypal.com; connect-src 'self' https://*.supabase.co https://www.paypal.com https://*.paypal.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline';">
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://www.paypal.com/sdk/js?client-id=AY6PgnvlAbRHcSgA6sGEo3xdx5v7-7Ln-srrWwBQPcO8C0nwuQzyv2tSaQrncWzjbYAeE1vAPYrgwVEd&currency=GBP"></script>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img id="logo-img" src="" alt="Hype" />
+      Hype Competitions
+    </div>
+    <div class="header-actions">
+      <span class="credit-badge" id="credit-display">Credit: £0.00</span>
+      <button class="btn-outline" id="topup-btn">Top up</button>
+      <button class="btn-outline" id="user-btn">Account</button>
+      <button class="btn-outline" id="admin-login-btn">Admin</button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1>Win <span>Big</span> with Hype</h1>
+    <p>Low odds. Huge prizes. Top up credit with PayPal, then enter instantly.</p>
+    <button class="btn" onclick="document.getElementById('competitions').scrollIntoView({behavior:'smooth'})">See Live Competitions</button>
+  </section>
+
+  <section class="section" id="competitions">
+    <h2>Live Competitions</h2>
+    <div class="comp-grid" id="comp-grid"></div>
+  </section>
+
+  <section class="section" id="instant">
+    <h2>Instant Wins</h2>
+    <p style="color:var(--muted);margin-bottom:12px;font-size:.9rem">Admin manually selects winners for these prizes.</p>
+    <div class="comp-grid" id="instant-grid"></div>
+  </section>
+
+  <section class="section" id="winners">
+    <h2>Recent Winners</h2>
+    <div class="winners" id="winners-list"></div>
+  </section>
+
+  <section class="section">
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><h3>Create account</h3><p>Register and top up credit with PayPal.</p></div>
+      <div class="step"><div class="step-num">2</div><h3>Enter with credit</h3><p>Use site credit for tickets — no more payment checks.</p></div>
+      <div class="step"><div class="step-num">3</div><h3>Watch the draws</h3><p>Auto credit draws or manual instant wins.</p></div>
+    </div>
+  </section>
+
+  <!-- Admin Panel -->
+  <div id="admin-panel">
+    <h2 style="margin-bottom:12px;">Admin Panel</h2>
+    <div class="tabs">
+      <div class="tab active" data-tab="comps">Competitions</div>
+      <div class="tab" data-tab="instant">Instant Wins</div>
+      <div class="tab" data-tab="draws">Auto Draws</div>
+      <div class="tab" data-tab="users">Users / Credits</div>
+    </div>
+
+    <div id="tab-comps">
+      <form class="admin-form" id="comp-form">
+        <input id="c-title" placeholder="Title" required />
+        <input id="c-prize" type="number" step="0.01" placeholder="Prize value (£)" required />
+        <input id="c-tickets" type="number" placeholder="Total tickets" required />
+        <input id="c-price" type="number" step="0.01" placeholder="Ticket price (£)" required />
+        <input id="c-sold" type="number" placeholder="% sold" value="0" />
+        <input id="c-end" type="datetime-local" required />
+        <input id="c-image" placeholder="Image URL (optional)" />
+        <button class="btn" type="submit">Add Competition</button>
+      </form>
+      <div id="profit-preview" style="margin-bottom:12px;font-size:.9rem;"></div>
+      <div class="comp-list" id="admin-comp-list"></div>
+    </div>
+
+    <div id="tab-instant" style="display:none">
+      <form class="admin-form" id="instant-form">
+        <input id="i-title" placeholder="Instant win title" required />
+        <input id="i-value" type="number" step="0.01" placeholder="Prize value (£)" />
+        <input id="i-image" placeholder="Image URL (optional)" />
+        <button class="btn" type="submit">Add Instant Win</button>
+      </form>
+      <div class="comp-list" id="admin-instant-list"></div>
+    </div>
+
+    <div id="tab-draws" style="display:none">
+      <h3 style="margin-bottom:10px">Automatic Credit Draws</h3>
+      <p style="color:var(--muted);font-size:.9rem;margin-bottom:12px">Award small site credit only.</p>
+      <form class="admin-form" id="draw-form">
+        <input id="d-amount" type="number" step="0.01" placeholder="Credit amount (£)" value="5" required />
+        <input id="d-count" type="number" placeholder="Number of winners" value="3" required />
+        <button class="btn" type="submit">Run Auto Credit Draw Now</button>
+      </form>
+    </div>
+
+    <div id="tab-users" style="display:none">
+      <h3 style="margin-bottom:10px">Users & Credits</h3>
+      <div class="comp-list" id="admin-user-list"></div>
+    </div>
+
+    <button class="btn-outline" style="margin-top:16px;" onclick="logout()">Log out</button>
+  </div>
+
+  <!-- Modals -->
+  <div class="modal" id="login-modal">
+    <div class="modal-box">
+      <h3>Admin Login</h3>
+      <input id="login-user" placeholder="Username" />
+      <input id="login-pass" type="password" placeholder="Password" />
+      <button class="btn" style="width:100%;" id="do-login">Login</button>
+      <button class="btn-outline" style="width:100%;margin-top:8px;" id="close-login">Cancel</button>
+    </div>
+  </div>
+
+  <div class="modal" id="user-modal">
+    <div class="modal-box">
+      <h3>Account</h3>
+      <div id="user-login-form">
+        <input id="u-email" placeholder="Email" />
+        <input id="u-pass" type="password" placeholder="Password" />
+        <button class="btn" style="width:100%;margin-bottom:8px;" onclick="userLogin()">Login</button>
+        <button class="btn-outline" style="width:100%;" onclick="userRegister()">Register</button>
+      </div>
+      <div id="user-logged" style="display:none">
+        <p>Logged in as <strong id="user-email-display"></strong></p>
+        <p style="margin:10px 0">Credit: <strong id="user-credit-display">£0.00</strong></p>
+        <button class="btn-outline" style="width:100%;" onclick="userLogout()">Log out</button>
+      </div>
+      <button class="btn-outline" style="width:100%;margin-top:12px;" id="close-user">Close</button>
+    </div>
+  </div>
+
+  <div class="modal" id="topup-modal">
+    <div class="modal-box">
+      <h3>Top up site credit</h3>
+      <p style="color:var(--muted);font-size:0.9rem;margin-bottom:12px;">Minimum £5. Money goes straight to your PayPal.</p>
+      <div class="topup-options">
+        <button class="btn-outline" data-amount="5" onclick="selectTopup(5)">£5</button>
+        <button class="btn" data-amount="10" onclick="selectTopup(10)">£10</button>
+        <button class="btn-outline" data-amount="20" onclick="selectTopup(20)">£20</button>
+        <button class="btn-outline" data-amount="50" onclick="selectTopup(50)">£50</button>
+        <button class="btn-outline" data-amount="custom" onclick="selectTopup('custom')">Custom</button>
+      </div>
+      <input id="custom-amount" type="number" step="0.01" min="5" placeholder="Custom amount (£)" style="margin-top:8px;" />
+      <div id="paypal-button-container"></div>
+      <button class="btn-outline" style="width:100%;margin-top:12px;" id="close-topup">Close</button>
+    </div>
+  </div>
+
+  <footer>
+    <p><strong>Hype Competitions</strong></p>
+    <p>Low odds. Big prizes. Every day.</p>
+    <p style="margin-top:10px;"><a href="#">Terms</a> · <a href="#">Privacy</a> · <a href="#">Contact</a></p>
+    <p style="margin-top:10px;font-size:.75rem;">© 2026 Hype Competitions</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

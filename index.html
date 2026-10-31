@@ -9,7 +9,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.paypal.com https://*.paypal.com; connect-src 'self' https://*.supabase.co https://www.paypal.com https://*.paypal.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline';">
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://www.paypal.com/sdk/js?client-id=AY6PgnvlAbRHcSgA6sGEo3xdx5v7-7Ln-srrWwBQPcO8C0nwuQzyv2tSaQrncWzjbYAeE1vAPYrgwVEd&currency=GBP&enable-funding=card,paylater,venmo"></script>
+  <script src="https://www.paypal.com/sdk/js?client-id=AY6PgnvlAbRHcSgA6sGEo3xdx5v7-7Ln-srrWwBQPcO8C0nwuQzyv2tSaQrncWzjbYAeE1vAPYrgwVEd&currency=GBP&enable-funding=card,paylater,venmo,googlepay,applepay&disable-funding=credit"></script>
 </head>
 <body>
   <header>
@@ -104,6 +104,12 @@
     <div id="tab-users" style="display:none">
       <h3 style="margin-bottom:10px">Users & Credits</h3>
       <div class="comp-list" id="admin-user-list"></div>
+      <h3 style="margin:20px 0 10px">Look up ticket winner</h3>
+      <div class="admin-form">
+        <input id="lookup-ticket" placeholder="Enter ticket number (e.g. HYP-A3K9X2)" />
+        <button class="btn" type="button" onclick="lookupTicket()">Look up</button>
+      </div>
+      <div id="lookup-result" style="margin-top:10px;font-size:0.9rem;"></div>
     </div>
 
     <button class="btn-outline" style="margin-top:16px;" onclick="logout()">Log out</button>
@@ -125,6 +131,7 @@
       <h3>Account</h3>
       <div id="user-login-form">
         <input id="u-email" placeholder="Email" />
+        <input id="u-phone" placeholder="Phone number" />
         <input id="u-pass" type="password" placeholder="Password" />
         <button class="btn" style="width:100%;margin-bottom:8px;" onclick="userLogin()">Login</button>
         <button class="btn-outline" style="width:100%;" onclick="userRegister()">Register</button>
@@ -154,6 +161,21 @@
       <input id="custom-amount" type="number" step="0.01" min="5" placeholder="Custom amount (£)" style="margin-top:8px;" />
       <div id="paypal-button-container"></div>
       <button class="btn-outline" style="width:100%;margin-top:12px;" id="close-topup">Close</button>
+    </div>
+  </div>
+
+  <div class="modal" id="qty-modal">
+    <div class="modal-box">
+      <h3 id="qty-title">Enter competition</h3>
+      <p id="qty-price" style="color:var(--muted);margin-bottom:12px;"></p>
+      <div class="qty-row">
+        <button class="btn-outline" type="button" onclick="changeQty(-1)">−</button>
+        <input id="qty-input" type="number" min="1" value="1" />
+        <button class="btn-outline" type="button" onclick="changeQty(1)">+</button>
+      </div>
+      <p id="qty-total" style="font-weight:700;margin:8px 0 16px;"></p>
+      <button class="btn" style="width:100%;" onclick="confirmQty()">Confirm</button>
+      <button class="btn-outline" style="width:100%;margin-top:8px;" onclick="document.getElementById('qty-modal').classList.remove('show')">Cancel</button>
     </div>
   </div>
 

@@ -203,7 +203,7 @@ function renderAdmin() {
       const row = document.createElement('div');
       row.className = 'comp-row';
       row.innerHTML = `
-        <div><strong>${u.email}</strong><br><span style="font-size:.85rem">Credit: £${Number(u.credit||0).toFixed(2)}</span></div>
+        <div><strong>${u.email}</strong><br><span style="font-size:.85rem">Credit: £${Number(u.credit||0).toFixed(2)} · ${u.phone || 'No phone'}</span></div>
         <button class="btn-sm btn-outline" onclick="addCredit('${u.email}')">+ Credit</button>
       `;
       ul.appendChild(row);
@@ -266,11 +266,12 @@ function refreshUserModal() {
 
 async function userRegister() {
   const email = document.getElementById('u-email').value.trim();
+  const phone = document.getElementById('u-phone').value.trim();
   const pass = document.getElementById('u-pass').value;
-  if (!email || !pass) return alert('Enter email and password');
+  if (!email || !pass || !phone) return alert('Enter email, phone number and password');
   const { data: existing } = await sb.from('users').select('id').eq('email', email).maybeSingle();
   if (existing) return alert('Email already registered');
-  const { data, error } = await sb.from('users').insert({ email, password: pass, credit: 0 }).select().single();
+  const { data, error } = await sb.from('users').insert({ email, phone, password: pass, credit: 0 }).select().single();
   if (error) return alert('Registration failed: ' + error.message);
   currentUser = data;
   localStorage.setItem('hype_current_email', email);
@@ -325,8 +326,7 @@ function renderPayPalButton() {
   }
   container.innerHTML = '';
   paypal.Buttons({
-    fundingSource: undefined,
-    style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'paypal' },
+    style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'paypal', tagline: false },
     createOrder: (data, actions) => {
       return actions.order.create({
         purchase_units: [{
@@ -350,14 +350,14 @@ function renderPayPalButton() {
     },
     onError: err => {
       console.error('PayPal error:', err);
-      container.innerHTML = '<p style="color:#f66;font-size:0.85rem;">Payment error. Please try again or use a different method.</p>';
+      container.innerHTML = '<p style="color:#f66;font-size:0.85rem;">Payment error. Please try again.</p>';
     },
     onCancel: () => {
-      container.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">Payment cancelled.</p>';
+      container.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">Payment cancelled. Choose an amount to try again.</p>';
     }
   }).render('#paypal-button-container').catch(err => {
     console.error('PayPal render failed:', err);
-    container.innerHTML = '<p style="color:#f66;font-size:0.85rem;">Could not load payment buttons. Check your connection and refresh.</p>';
+    container.innerHTML = '<p style="color:#f66;font-size:0.85rem;">Could not load payment buttons. Refresh and try again.</p>';
   });
 }
 
@@ -408,52 +408,86 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  document.addEventListener('click', async e => {
+  document.getElementById('qty-input')?.addEventListener('input', updateQtyTotal);
     if (e.target.classList.contains('enter-btn')) {
       if (!currentUser) { alert('Please create an account first.'); document.getElementById('user-modal').classList.add('show'); return; }
       const price = parseFloat(e.target.dataset.price) || 1;
       const title = e.target.dataset.title || 'competition';
       const isInstant = e.target.closest('#instant-grid') !== null;
-
-      const qty = parseInt(prompt(`How many tickets for "${title}"?\nPrice: £${price.toFixed(2)} each`, '1')) || 1;
-      if (qty < 1) return;
-      const total = price * qty;
-      if (Number(currentUser.credit || 0) < total) {
-        alert(`Not enough credit. You need £${total.toFixed(2)}. Top up first.`);
-        document.getElementById('topup-modal').classList.add('show');
-        return;
-      }
-      if (!confirm(`Spend £${total.toFixed(2)} for ${qty} ticket(s) on "${title}"?`)) return;
-
-      const tickets = [];
-      for (let i = 0; i < qty; i++) {
-        tickets.push('HYP-' + Math.random().toString(36).slice(2, 8).toUpperCase());
-      }
-
-      const newCredit = Number(currentUser.credit || 0) - total;
-      await sb.from('users').update({ credit: newCredit }).eq('email', currentUser.email);
-      currentUser.credit = newCredit;
-      updateCreditDisplay();
-
-      await sb.from('purchases').insert({
-        email: currentUser.email,
-        title,
-        tickets: tickets.join(', '),
-        qty,
-        total,
-        is_instant: isInstant,
-        created_at: new Date().toISOString()
-      });
-
-      if (isInstant) {
-        showReveal(tickets[0], title);
-      } else {
-        alert(`Entered!\nTicket${qty > 1 ? 's' : ''}: ${tickets.join(', ')}\nCredit remaining: £${newCredit.toFixed(2)}`);
-      }
-      await loadAll();
-      if (document.getElementById('user-modal').classList.contains('show')) loadUserHistory();
+      openQtyModal(title, price, isInstant);
     }
   });
+
+let pendingEntry = null;
+
+function changeQty(delta) {
+  const input = document.getElementById('qty-input');
+  let val = parseInt(input.value) || 1;
+  val = Math.max(1, val + delta);
+  input.value = val;
+  updateQtyTotal();
+}
+
+function updateQtyTotal() {
+  if (!pendingEntry) return;
+  const qty = parseInt(document.getElementById('qty-input').value) || 1;
+  const total = pendingEntry.price * qty;
+  document.getElementById('qty-total').textContent = `Total: £${total.toFixed(2)}`;
+}
+
+function openQtyModal(title, price, isInstant) {
+  pendingEntry = { title, price, isInstant };
+  document.getElementById('qty-title').textContent = title;
+  document.getElementById('qty-price').textContent = `£${price.toFixed(2)} per ticket`;
+  document.getElementById('qty-input').value = 1;
+  updateQtyTotal();
+  document.getElementById('qty-modal').classList.add('show');
+}
+
+async function confirmQty() {
+  if (!pendingEntry || !currentUser) return;
+  const qty = parseInt(document.getElementById('qty-input').value) || 1;
+  const total = pendingEntry.price * qty;
+  if (Number(currentUser.credit || 0) < total) {
+    alert(`Not enough credit. You need £${total.toFixed(2)}.`);
+    document.getElementById('qty-modal').classList.remove('show');
+    document.getElementById('topup-modal').classList.add('show');
+    return;
+  }
+  document.getElementById('qty-modal').classList.remove('show');
+
+  const tickets = [];
+  for (let i = 0; i < qty; i++) {
+    tickets.push('HYP-' + Math.random().toString(36).slice(2, 8).toUpperCase());
+  }
+
+  const newCredit = Number(currentUser.credit || 0) - total;
+  await sb.from('users').update({ credit: newCredit }).eq('email', currentUser.email);
+  currentUser.credit = newCredit;
+  updateCreditDisplay();
+
+  await sb.from('purchases').insert({
+    email: currentUser.email,
+    title: pendingEntry.title,
+    tickets: tickets.join(', '),
+    qty,
+    total,
+    is_instant: pendingEntry.isInstant,
+    created_at: new Date().toISOString()
+  });
+
+  if (pendingEntry.isInstant) {
+    showReveal(tickets[0], pendingEntry.title);
+  } else {
+    alert(`Entered!\nTicket${qty > 1 ? 's' : ''}: ${tickets.join(', ')}\nCredit remaining: £${newCredit.toFixed(2)}`);
+  }
+  pendingEntry = null;
+  await loadAll();
+  if (document.getElementById('user-modal').classList.contains('show')) loadUserHistory();
+}
+
+window.changeQty = changeQty;
+window.confirmQty = confirmQty;
 
   document.getElementById('admin-login-btn')?.addEventListener('click', () => {
     if (isAdmin) document.getElementById('admin-panel').classList.toggle('show');
@@ -619,4 +653,25 @@ async function loadUserHistory() {
   });
 }
 
-window.loadUserHistory = loadUserHistory;
+async function lookupTicket() {
+  const ticket = document.getElementById('lookup-ticket').value.trim().toUpperCase();
+  const result = document.getElementById('lookup-result');
+  if (!ticket) { result.innerHTML = '<span style="color:#f66">Enter a ticket number</span>'; return; }
+
+  const { data: purchases } = await sb.from('purchases').select('*');
+  const match = (purchases || []).find(p => (p.tickets || '').toUpperCase().includes(ticket));
+  if (!match) { result.innerHTML = '<span style="color:#f66">Ticket not found</span>'; return; }
+
+  const { data: user } = await sb.from('users').select('*').eq('email', match.email).maybeSingle();
+  result.innerHTML = `
+    <div style="background:#111;padding:12px;border-radius:8px;">
+      <strong>Ticket:</strong> ${ticket}<br>
+      <strong>Competition:</strong> ${match.title}<br>
+      <strong>Owner:</strong> ${match.email}<br>
+      <strong>Phone:</strong> ${user?.phone || 'Not provided'}<br>
+      <strong>Purchased:</strong> ${new Date(match.created_at).toLocaleString()}
+    </div>
+  `;
+}
+
+window.lookupTicket = lookupTicket;

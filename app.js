@@ -34,18 +34,18 @@ async function loadAll() {
   // Seed if empty
   if (competitions.length === 0) {
     await sb.from('competitions').insert([
-      { title: 'Win a 2026 BMW M4', prize_value: 65000, total_tickets: 15000, price: 5.99, sold_percent: 42, end_date: '2026-11-05T23:00:00Z', image: 'images/bmw.jpg' },
-      { title: 'Rolex Submariner', prize_value: 12000, total_tickets: 2500, price: 7.99, sold_percent: 18, end_date: '2026-11-08T21:00:00Z', image: 'images/rolex.jpg' },
-      { title: '£50,000 Cash', prize_value: 50000, total_tickets: 100000, price: 0.65, sold_percent: 35, end_date: '2026-11-03T20:00:00Z', image: 'images/cash.jpg' }
+      { title: 'Win a 2026 BMW M4', prize_value: 65000, total_tickets: 15000, price: 5.99, sold_percent: 42, end_date: '2026-11-05T23:00:00Z', image: 'bmw.jpg' },
+      { title: 'Rolex Submariner', prize_value: 12000, total_tickets: 2500, price: 7.99, sold_percent: 18, end_date: '2026-11-08T21:00:00Z', image: 'rolex.jpg' },
+      { title: '£50,000 Cash', prize_value: 50000, total_tickets: 100000, price: 0.65, sold_percent: 35, end_date: '2026-11-03T20:00:00Z', image: 'cash.jpg' }
     ]);
     await loadAll();
     return;
   }
   if (instants.length === 0) {
     await sb.from('instants').insert([
-      { title: 'Mountain Bike', value: 800, image: 'images/bike.jpg' },
-      { title: '£500 Cash', value: 500, image: 'images/cash.jpg' },
-      { title: 'AirPods Pro', value: 250, image: 'images/airpods.jpg' }
+      { title: 'Mountain Bike', value: 800, image: 'bike.jpg' },
+      { title: '£500 Cash', value: 500, image: 'cash.jpg' },
+      { title: 'AirPods Pro', value: 250, image: 'airpods.jpg' }
     ]);
     await loadAll();
     return;
@@ -68,14 +68,14 @@ function renderPublic() {
   grid.innerHTML = '';
   competitions.forEach(c => {
     const imgMap = {
-      'bmw': 'images/bmw.jpg',
-      'rolex': 'images/rolex.jpg',
-      'cash': 'images/cash.jpg',
-      'bike': 'images/bike.jpg',
-      'airpods': 'images/airpods.jpg'
+      'bmw': 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=800&q=80',
+      'rolex': 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=800&q=80',
+      'cash': 'https://images.unsplash.com/photo-1580519542036-c47de6196ba5?w=800&q=80',
+      'bike': 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=800&q=80',
+      'airpods': 'https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?w=800&q=80'
     };
     const key = Object.keys(imgMap).find(k => (c.title || '').toLowerCase().includes(k));
-    const imgSrc = c.image || (key ? imgMap[key] : 'images/bmw.jpg');
+    const imgSrc = c.image || (key ? imgMap[key] : imgMap.bmw);
     const card = document.createElement('div');
     card.className = 'comp-card';
     card.innerHTML = `
@@ -97,12 +97,12 @@ function renderPublic() {
     ig.innerHTML = '';
     instants.forEach(i => {
       const imgMapI = {
-        'bike': 'images/bike.jpg',
-        'cash': 'images/cash.jpg',
-        'airpods': 'images/airpods.jpg'
+        'bike': 'bike.jpg',
+        'cash': 'cash.jpg',
+        'airpods': 'airpods.jpg'
       };
       const keyI = Object.keys(imgMapI).find(k => (i.title || '').toLowerCase().includes(k));
-      const imgSrc = i.image || (keyI ? imgMapI[keyI] : 'images/bike.jpg');
+      const imgSrc = i.image || (keyI ? imgMapI[keyI] : 'bike.jpg');
       const card = document.createElement('div');
       card.className = 'comp-card';
       card.innerHTML = `
